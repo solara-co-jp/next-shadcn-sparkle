@@ -1,65 +1,132 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ReactNode, createContext, useContext } from "react";
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
-/* ── Primitive wrappers (kept for internal use) ── */
+/* ── Size context ── */
 
-function TableBase({ className, ...props }: React.ComponentProps<"table">) {
+type TableSize = "xs" | "sm" | "md";
+const TableSizeContext = createContext<TableSize>("md");
+
+/* ── Size token maps ── */
+
+const headerCellSize: Record<TableSize, { cell: string; text: string }> = {
+  xs: {
+    cell: "px-[var(--sp-16)] py-[var(--sp-8)]",
+    text: "text-[length:var(--font-size-sp-2)] leading-[var(--lh-2)]",
+  },
+  sm: {
+    cell: "px-[var(--sp-16)] py-[var(--sp-8)]",
+    text: "text-[length:var(--font-size-sp-2)] leading-[var(--lh-2)]",
+  },
+  md: {
+    cell: "px-[var(--sp-16)] py-[var(--sp-8)]",
+    text: "text-[length:var(--font-size-sp-2)] leading-[var(--lh-2)]",
+  },
+};
+
+const dataCellSize: Record<TableSize, { cell: string; text: string }> = {
+  xs: {
+    cell: "h-[40px] px-[var(--sp-16)] py-[var(--sp-8)]",
+    text: "text-[length:var(--font-size-sp-2)] leading-[var(--lh-2)]",
+  },
+  sm: {
+    cell: "h-[56px] px-[var(--sp-16)] py-[var(--sp-8)]",
+    text: "text-[length:var(--font-size-sp-2)] leading-[var(--lh-2)]",
+  },
+  md: {
+    cell: "h-[80px] px-[var(--sp-16)] py-[var(--sp-12)]",
+    text: "text-[length:var(--font-size-sp-3)] leading-[var(--lh-3)]",
+  },
+};
+
+const checkboxCellSize: Record<TableSize, string> = {
+  xs: "h-[40px]",
+  sm: "h-[56px]",
+  md: "h-[80px]",
+};
+
+/* ── Alignment helper ── */
+
+const alignClass = {
+  left: "text-left",
+  center: "text-center",
+  right: "text-right",
+} as const;
+
+/* ── Table (root) ── */
+
+export interface TableProps extends React.ComponentProps<"table"> {
+  children: ReactNode;
+  size?: TableSize;
+}
+
+function Table({ children, size = "md", className, ...props }: TableProps) {
   return (
-    <div
-      data-slot="table-container"
-      className="relative w-full overflow-x-auto"
-    >
-      <table
-        data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
-        {...props}
-      />
-    </div>
+    <TableSizeContext.Provider value={size}>
+      <div data-slot="table-container" className="relative w-full overflow-x-auto">
+        <table
+          data-slot="table"
+          className={cn(
+            "w-full border-collapse",
+            "font-[family-name:var(--font-family-base)]",
+            className
+          )}
+          {...props}
+        >
+          {children}
+        </table>
+      </div>
+    </TableSizeContext.Provider>
   );
 }
+
+/* ── TableHeader ── */
 
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
-  return (
-    <thead
-      data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
-      {...props}
-    />
-  );
+  return <thead data-slot="table-header" className={className} {...props} />;
 }
 
+/* ── TableBody ── */
+
 function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
-  return (
-    <tbody
-      data-slot="table-body"
-      className={cn("[&_tr:last-child]:border-0", className)}
-      {...props}
-    />
-  );
+  return <tbody data-slot="table-body" className={className} {...props} />;
 }
+
+/* ── TableFooter ── */
 
 function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   return (
     <tfoot
       data-slot="table-footer"
-      className={cn(
-        "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
-        className
-      )}
+      className={cn("border-t border-sp-divider-middle", className)}
       {...props}
     />
   );
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+/* ── TableRow ── */
+
+export interface TableRowProps extends React.ComponentProps<"tr"> {
+  disabled?: boolean;
+}
+
+function TableRow({ disabled, className, ...props }: TableRowProps) {
   return (
     <tr
       data-slot="table-row"
+      data-disabled={disabled || undefined}
       className={cn(
-        "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+        "transition-colors",
+        disabled
+          ? "bg-sp-neutral-100 [&_td]:text-sp-text-low"
+          : [
+              "hover:bg-sp-primary-50",
+              "focus-within:bg-sp-primary-100",
+              "data-[state=selected]:bg-sp-primary-50",
+            ],
         className
       )}
       {...props}
@@ -67,82 +134,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   );
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
-  return (
-    <th
-      data-slot="table-head"
-      className={cn(
-        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
-        className
-      )}
-      {...props}
-    />
-  );
-}
-
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
-  return (
-    <td
-      data-slot="table-cell"
-      className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
-        className
-      )}
-      {...props}
-    />
-  );
-}
-
-function TableCaption({
-  className,
-  ...props
-}: React.ComponentProps<"caption">) {
-  return (
-    <caption
-      data-slot="table-caption"
-      className={cn("mt-4 text-sm text-muted-foreground", className)}
-      {...props}
-    />
-  );
-}
-
-/* ── Sparkle Table (composite) ── */
-
-export interface TableProps extends React.ComponentProps<"table"> {
-  children: ReactNode;
-}
-
-function Table({ children, className, ...props }: TableProps) {
-  return (
-    <TableBase
-      className={cn(
-        "w-full border-collapse",
-        "text-[length:var(--font-size-sp-2)] leading-[var(--lh-2)]",
-        "font-[family-name:var(--font-family-base)]",
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </TableBase>
-  );
-}
-
-function SparkleTableRow({
-  className,
-  ...props
-}: React.ComponentProps<"tr">) {
-  return (
-    <TableRow
-      className={cn(
-        "hover:bg-sp-neutral-50 transition-colors",
-        className
-      )}
-      {...props}
-    />
-  );
-}
-SparkleTableRow.displayName = "TableRow";
+/* ── TableHeaderCell ── */
 
 export interface TableHeaderCellProps extends React.ComponentProps<"th"> {
   align?: "left" | "center" | "right";
@@ -155,26 +147,109 @@ function TableHeaderCell({
   className,
   ...props
 }: TableHeaderCellProps) {
+  const size = useContext(TableSizeContext);
+  const s = headerCellSize[size];
   return (
-    <TableHead
+    <th
+      data-slot="table-head"
       className={cn(
-        "px-[var(--sp-16)] py-[var(--sp-8)]",
+        s.cell,
         "bg-sp-neutral-50",
         "border-b border-sp-divider-middle",
-        "font-bold text-sp-text-middle",
-        align === "center"
-          ? "text-center"
-          : align === "right"
-            ? "text-right"
-            : "text-left",
+        "font-bold",
+        s.text,
+        "text-sp-text-middle",
+        alignClass[align],
+        "font-[family-name:var(--font-family-base)]",
         className
       )}
       {...props}
     >
       {children}
-    </TableHead>
+    </th>
   );
 }
+
+/* ── TableHeaderCheckboxCell ── */
+
+export interface TableHeaderCheckboxCellProps extends Omit<React.ComponentProps<"th">, "children"> {
+  checked?: boolean;
+  indeterminate?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+}
+
+function TableHeaderCheckboxCell({
+  checked,
+  indeterminate,
+  onCheckedChange,
+  className,
+  ...props
+}: TableHeaderCheckboxCellProps) {
+  return (
+    <th
+      data-slot="table-head"
+      className={cn(
+        "w-[48px] px-[var(--sp-8)] py-[var(--sp-4)]",
+        "bg-sp-neutral-50",
+        "border-b border-sp-divider-middle",
+        "text-center",
+        className
+      )}
+      {...props}
+    >
+      <div className="flex items-center justify-center">
+        <Checkbox
+          checked={checked}
+          indeterminate={indeterminate}
+          onCheckedChange={onCheckedChange}
+          size="sm"
+        />
+      </div>
+    </th>
+  );
+}
+
+/* ── TableCheckboxCell ── */
+
+export interface TableCheckboxCellProps extends Omit<React.ComponentProps<"td">, "children"> {
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  disabled?: boolean;
+}
+
+function TableCheckboxCell({
+  checked,
+  onCheckedChange,
+  disabled,
+  className,
+  ...props
+}: TableCheckboxCellProps) {
+  const size = useContext(TableSizeContext);
+  return (
+    <td
+      data-slot="table-cell"
+      className={cn(
+        "w-[48px] px-[var(--sp-8)]",
+        checkboxCellSize[size],
+        "border-b border-sp-divider-low",
+        "text-center",
+        className
+      )}
+      {...props}
+    >
+      <div className="flex items-center justify-center">
+        <Checkbox
+          checked={checked}
+          onCheckedChange={onCheckedChange}
+          disabled={disabled}
+          size="sm"
+        />
+      </div>
+    </td>
+  );
+}
+
+/* ── TableDataCell ── */
 
 export interface TableDataCellProps extends React.ComponentProps<"td"> {
   align?: "left" | "center" | "right";
@@ -187,41 +262,64 @@ function TableDataCell({
   className,
   ...props
 }: TableDataCellProps) {
+  const size = useContext(TableSizeContext);
+  const s = dataCellSize[size];
   return (
-    <TableCell
+    <td
+      data-slot="table-cell"
       className={cn(
-        "px-[var(--sp-16)] py-[var(--sp-12)]",
+        s.cell,
         "border-b border-sp-divider-low",
+        s.text,
         "text-sp-text-high",
-        align === "center"
-          ? "text-center"
-          : align === "right"
-            ? "text-right"
-            : "text-left",
+        "font-[family-name:var(--font-family-base)]",
+        alignClass[align],
         className
       )}
       {...props}
     >
       {children}
-    </TableCell>
+    </td>
   );
 }
 
+/* ── TableCaption ── */
+
+function TableCaption({ className, ...props }: React.ComponentProps<"caption">) {
+  return (
+    <caption
+      data-slot="table-caption"
+      className={cn(
+        "mt-[var(--sp-16)] text-[length:var(--font-size-sp-2)] leading-[var(--lh-2)] text-sp-text-low",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+/* ── Display names ── */
+
 Table.displayName = "Table";
+TableHeader.displayName = "TableHeader";
+TableBody.displayName = "TableBody";
+TableFooter.displayName = "TableFooter";
+TableRow.displayName = "TableRow";
 TableHeaderCell.displayName = "TableHeaderCell";
+TableHeaderCheckboxCell.displayName = "TableHeaderCheckboxCell";
+TableCheckboxCell.displayName = "TableCheckboxCell";
 TableDataCell.displayName = "TableDataCell";
+TableCaption.displayName = "TableCaption";
 
 export {
   Table,
   TableHeader,
   TableBody,
   TableFooter,
-  TableHead,
   TableRow,
-  TableCell,
-  TableCaption,
-  TableBase,
-  SparkleTableRow as TableRowStyled,
   TableHeaderCell,
+  TableHeaderCheckboxCell,
+  TableCheckboxCell,
   TableDataCell,
+  TableCaption,
 };

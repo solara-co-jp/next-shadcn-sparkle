@@ -11,7 +11,7 @@
     {
       "name": "storybook",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["storybook", "--no-open"],
+      "runtimeArgs": ["storybook", "--no-open", "--ci"],
       "port": 6006,
       "autoPort": true
     }
