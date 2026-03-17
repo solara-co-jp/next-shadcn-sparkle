@@ -181,6 +181,39 @@ src/
   preview-head.html    # Google Fonts loading
 ```
 
+## Template Usage
+
+このリポジトリをテンプレートとして派生プロジェクトを作成し、テンプレートの更新を後から取り込むことができます。
+
+### 派生リポジトリの作成
+
+```bash
+# 1. GitHub で "Use this template" または手動でリポジトリを作成
+git clone git@github.com:your-org/your-app.git
+cd your-app
+
+# 2. テンプレートを upstream として登録
+bash scripts/init-from-template.sh
+```
+
+### テンプレート更新の取り込み
+
+```bash
+# 変更内容を確認（dry-run）
+bash scripts/sync-from-template.sh --dry-run
+
+# 更新を取り込み
+bash scripts/sync-from-template.sh
+```
+
+コンフリクトが発生した場合は手動で解決してください。ファイルの所有権については [`.github/TEMPLATE_PATHS.md`](.github/TEMPLATE_PATHS.md) を参照してください。
+
+### 派生リポジトリでの開発ルール
+
+- `src/components/ui/` は**テンプレート所有**です。直接編集せず、テンプレート側で更新してください
+- アプリ固有のコンポーネントは `src/components/` 配下（`ui/` 以外）に配置してください
+- 詳細は [`.github/TEMPLATE_PATHS.md`](.github/TEMPLATE_PATHS.md) を参照
+
 ## License
 
 Private
