@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import type { SparkleSize } from "@/types/sparkle";
 
@@ -75,32 +75,40 @@ function InputTime({
   const value = isControlled ? valueProp : internalValue;
   const [inputText, setInputText] = useState(value ? formatTime(value) : "");
   const [selectedHour, setSelectedHour] = useState<number>(value?.hour ?? 0);
-  const [selectedMinute, setSelectedMinute] = useState<number>(
-    value?.minute ?? 0
-  );
-
-  function setValue(time: { hour: number; minute: number } | undefined) {
-    if (!isControlled) setInternalValue(time);
-    onChange?.(time);
-  }
+  const [selectedMinute, setSelectedMinute] = useState<number>(value?.minute ?? 0);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hourListRef = useRef<HTMLDivElement>(null);
   const minuteListRef = useRef<HTMLDivElement>(null);
+  // Track latest value for blur handler (avoids stale closure)
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
+  const setValue = useCallback((time: { hour: number; minute: number } | undefined) => {
+    if (!isControlled) setInternalValue(time);
+    setInputText(time ? formatTime(time) : "");
+    if (time) {
+      setSelectedHour(time.hour);
+      setSelectedMinute(time.minute);
+    }
+    onChange?.(time);
+  }, [isControlled, onChange]);
 
   const minutes = Array.from(
     { length: Math.ceil(60 / minuteStep) },
     (_, i) => i * minuteStep
   );
 
-  // Sync when value changes externally
+  // Sync when controlled value changes externally
   useEffect(() => {
-    setInputText(value ? formatTime(value) : "");
-    if (value) {
-      setSelectedHour(value.hour);
-      setSelectedMinute(value.minute);
+    if (isControlled) {
+      setInputText(valueProp ? formatTime(valueProp) : "");
+      if (valueProp) {
+        setSelectedHour(valueProp.hour);
+        setSelectedMinute(valueProp.minute);
+      }
     }
-  }, [value]);
+  }, [valueProp, isControlled]);
 
   // Scroll to selected values when opening
   useEffect(() => {
@@ -144,12 +152,18 @@ function InputTime({
 
   function handleSelectHour(hour: number) {
     setSelectedHour(hour);
-    setValue({ hour, minute: selectedMinute });
+    const time = { hour, minute: selectedMinute };
+    if (!isControlled) setInternalValue(time);
+    setInputText(formatTime(time));
+    onChange?.(time);
   }
 
   function handleSelectMinute(minute: number) {
     setSelectedMinute(minute);
-    setValue({ hour: selectedHour, minute });
+    const time = { hour: selectedHour, minute };
+    if (!isControlled) setInternalValue(time);
+    setInputText(formatTime(time));
+    onChange?.(time);
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -168,8 +182,9 @@ function InputTime({
   }
 
   function handleInputBlur() {
-    if (value) {
-      setInputText(formatTime(value));
+    const current = valueRef.current;
+    if (current) {
+      setInputText(formatTime(current));
     } else {
       const parsed = parseTime(inputText);
       if (!parsed) setInputText("");
@@ -191,8 +206,7 @@ function InputTime({
   }
 
   function handleClear() {
-    onChange?.(undefined);
-    setInputText("");
+    setValue(undefined);
     inputRef.current?.focus();
   }
 
@@ -200,6 +214,8 @@ function InputTime({
     if (disabled) return;
     setOpen(!open);
   }
+
+  const showClear = !!value && !disabled;
 
   return (
     <div ref={containerRef} className={cn("relative inline-block", className)}>
@@ -235,26 +251,26 @@ function InputTime({
           )}
         />
         <div className="flex items-center gap-[2px] shrink-0">
-          {value && !disabled && (
-            <button
-              type="button"
-              onClick={handleClear}
-              aria-label="時刻をクリア"
-              className={cn(
-                "inline-flex items-center justify-center",
-                ib.btn,
-                "rounded-sp-action",
-                "text-sp-neutral-700",
-                "hover:bg-sp-neutral-50",
-                "cursor-pointer transition-colors",
-                "sparkle-focus-ring"
-              )}
-            >
-              <span className={cn("font-[family-name:var(--font-family-icon)] leading-none select-none", ib.icon)}>
-                close
-              </span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleClear}
+            aria-label="時刻をクリア"
+            className={cn(
+              "inline-flex items-center justify-center",
+              ib.btn,
+              "rounded-sp-action",
+              "text-sp-neutral-700",
+              "hover:bg-sp-neutral-50",
+              "cursor-pointer transition-colors",
+              "sparkle-focus-ring",
+              !showClear && "opacity-0 pointer-events-none"
+            )}
+            tabIndex={showClear ? 0 : -1}
+          >
+            <span className={cn("font-[family-name:var(--font-family-icon)] leading-none select-none", ib.icon)}>
+              cancel
+            </span>
+          </button>
           <button
             type="button"
             tabIndex={-1}

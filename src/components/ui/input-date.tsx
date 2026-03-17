@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import type { SparkleSize } from "@/types/sparkle";
@@ -45,7 +45,6 @@ function parseDate(str: string): Date | null {
   const d = Number(ds);
   if (m < 1 || m > 12 || d < 1 || d > 31) return null;
   const date = new Date(y, m - 1, d);
-  // Verify the date is valid (e.g. not Feb 30)
   if (
     date.getFullYear() !== y ||
     date.getMonth() !== m - 1 ||
@@ -72,16 +71,22 @@ function InputDate({
   const [inputText, setInputText] = useState(value ? formatDate(value) : "");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Track latest value for blur handler (avoids stale closure)
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
-  function setValue(date: Date | undefined) {
+  const setValue = useCallback((date: Date | undefined) => {
     if (!isControlled) setInternalValue(date);
-    setValue(date);
-  }
+    setInputText(date ? formatDate(date) : "");
+    onChange?.(date);
+  }, [isControlled, onChange]);
 
-  // Sync input text when value changes externally
+  // Sync input text when controlled value changes externally
   useEffect(() => {
-    setInputText(value ? formatDate(value) : "");
-  }, [value]);
+    if (isControlled) {
+      setInputText(valueProp ? formatDate(valueProp) : "");
+    }
+  }, [valueProp, isControlled]);
 
   // Close on outside click
   useEffect(() => {
@@ -111,7 +116,6 @@ function InputDate({
   function handleCalendarSelect(date: Date) {
     setValue(date);
     setOpen(false);
-    inputRef.current?.focus();
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -125,16 +129,15 @@ function InputDate({
 
     const parsed = parseDate(text);
     if (parsed) {
-      onChange?.(parsed);
+      setValue(parsed);
     }
   }
 
   function handleInputBlur() {
-    // On blur, re-sync the display text to the current value
-    if (value) {
-      setInputText(formatDate(value));
+    const current = valueRef.current;
+    if (current) {
+      setInputText(formatDate(current));
     } else {
-      // If text wasn't valid, clear it
       const parsed = parseDate(inputText);
       if (!parsed) setInputText("");
     }
@@ -155,8 +158,7 @@ function InputDate({
   }
 
   function handleClear() {
-    onChange?.(undefined);
-    setInputText("");
+    setValue(undefined);
     inputRef.current?.focus();
   }
 
@@ -166,6 +168,7 @@ function InputDate({
   }
 
   const ib = iconBtnSize[size];
+  const showClear = !!value && !disabled;
 
   return (
     <div ref={containerRef} className={cn("relative inline-block", className)}>
@@ -201,26 +204,26 @@ function InputDate({
           )}
         />
         <div className="flex items-center gap-[2px] shrink-0">
-          {value && !disabled && (
-            <button
-              type="button"
-              onClick={handleClear}
-              aria-label="日付をクリア"
-              className={cn(
-                "inline-flex items-center justify-center",
-                ib.btn,
-                "rounded-sp-action",
-                "text-sp-neutral-700",
-                "hover:bg-sp-neutral-50",
-                "cursor-pointer transition-colors",
-                "sparkle-focus-ring"
-              )}
-            >
-              <span className={cn("font-[family-name:var(--font-family-icon)] leading-none select-none", ib.icon)}>
-                close
-              </span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleClear}
+            aria-label="日付をクリア"
+            className={cn(
+              "inline-flex items-center justify-center",
+              ib.btn,
+              "rounded-sp-action",
+              "text-sp-neutral-700",
+              "hover:bg-sp-neutral-50",
+              "cursor-pointer transition-colors",
+              "sparkle-focus-ring",
+              !showClear && "opacity-0 pointer-events-none"
+            )}
+            tabIndex={showClear ? 0 : -1}
+          >
+            <span className={cn("font-[family-name:var(--font-family-icon)] leading-none select-none", ib.icon)}>
+              cancel
+            </span>
+          </button>
           <button
             type="button"
             tabIndex={-1}
