@@ -56,7 +56,7 @@ function parseDate(str: string): Date | null {
 }
 
 function InputDate({
-  value,
+  value: valueProp,
   onChange,
   placeholder = "年/月/日",
   isInvalid = false,
@@ -66,9 +66,17 @@ function InputDate({
 }: InputDateProps) {
   const ss = sizeStyles[size];
   const [open, setOpen] = useState(false);
+  const [internalValue, setInternalValue] = useState<Date | undefined>(valueProp);
+  const isControlled = valueProp !== undefined;
+  const value = isControlled ? valueProp : internalValue;
   const [inputText, setInputText] = useState(value ? formatDate(value) : "");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function setValue(date: Date | undefined) {
+    if (!isControlled) setInternalValue(date);
+    setValue(date);
+  }
 
   // Sync input text when value changes externally
   useEffect(() => {
@@ -101,7 +109,7 @@ function InputDate({
   }, [open]);
 
   function handleCalendarSelect(date: Date) {
-    onChange?.(date);
+    setValue(date);
     setOpen(false);
     inputRef.current?.focus();
   }
@@ -111,7 +119,7 @@ function InputDate({
     setInputText(text);
 
     if (text === "") {
-      onChange?.(undefined);
+      setValue(undefined);
       return;
     }
 
@@ -136,7 +144,7 @@ function InputDate({
     if (e.key === "Enter") {
       const parsed = parseDate(inputText);
       if (parsed) {
-        onChange?.(parsed);
+        setValue(parsed);
         setOpen(false);
       }
     }

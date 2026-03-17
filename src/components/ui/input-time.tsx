@@ -58,7 +58,7 @@ const cellBase = cn(
 );
 
 function InputTime({
-  value,
+  value: valueProp,
   onChange,
   placeholder = "--:--",
   isInvalid = false,
@@ -70,11 +70,19 @@ function InputTime({
   const ss = sizeStyles[size];
   const ib = iconBtnSize[size];
   const [open, setOpen] = useState(false);
+  const [internalValue, setInternalValue] = useState<{ hour: number; minute: number } | undefined>(valueProp);
+  const isControlled = valueProp !== undefined;
+  const value = isControlled ? valueProp : internalValue;
   const [inputText, setInputText] = useState(value ? formatTime(value) : "");
   const [selectedHour, setSelectedHour] = useState<number>(value?.hour ?? 0);
   const [selectedMinute, setSelectedMinute] = useState<number>(
     value?.minute ?? 0
   );
+
+  function setValue(time: { hour: number; minute: number } | undefined) {
+    if (!isControlled) setInternalValue(time);
+    onChange?.(time);
+  }
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hourListRef = useRef<HTMLDivElement>(null);
@@ -136,12 +144,12 @@ function InputTime({
 
   function handleSelectHour(hour: number) {
     setSelectedHour(hour);
-    onChange?.({ hour, minute: selectedMinute });
+    setValue({ hour, minute: selectedMinute });
   }
 
   function handleSelectMinute(minute: number) {
     setSelectedMinute(minute);
-    onChange?.({ hour: selectedHour, minute });
+    setValue({ hour: selectedHour, minute });
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -149,13 +157,13 @@ function InputTime({
     setInputText(text);
 
     if (text === "") {
-      onChange?.(undefined);
+      setValue(undefined);
       return;
     }
 
     const parsed = parseTime(text);
     if (parsed) {
-      onChange?.(parsed);
+      setValue(parsed);
     }
   }
 
@@ -172,7 +180,7 @@ function InputTime({
     if (e.key === "Enter") {
       const parsed = parseTime(inputText);
       if (parsed) {
-        onChange?.(parsed);
+        setValue(parsed);
         setOpen(false);
       }
     }
