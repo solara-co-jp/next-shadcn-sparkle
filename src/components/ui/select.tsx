@@ -251,7 +251,13 @@ function Select({
           className
         )}
       >
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={placeholder}>
+          {(selectedValue) => {
+            if (!selectedValue) return placeholder;
+            const found = options.find((o) => o.value === selectedValue);
+            return found ? found.label : selectedValue;
+          }}
+        </SelectValue>
         <SelectPrimitive.Icon
           render={
             <span
